@@ -3,7 +3,7 @@ use std::env::var;
 use serde::Serialize;
 use ureq::{post, Error, get};
 
-pub fn getImaggaAuthorization() -> String {
+pub fn get_imagga_authorization() -> String {
     match (var("IMAGGA_API_KEY"), var("IMAGGA_API_SECRET")) {
         (Ok(key), Ok(secret)) => {
             let auth = base64::encode::<String>(
@@ -22,9 +22,9 @@ struct ImaggaRequest<'a> {
     pub image_url: &'a str
 }
 
-pub fn getTagsForUrl(url: &str) {
+pub fn get_tags_for_url(url: &str) {
     let result = get("https://api.imagga.com/v2/tags")
-        .set("Authorization", &getImaggaAuthorization())
+        .set("Authorization", &get_imagga_authorization())
         .query("image_url", url)
         .call();
 
