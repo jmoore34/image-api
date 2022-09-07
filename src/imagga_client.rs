@@ -32,25 +32,37 @@ pub fn get_tags_for_url(url: &str) {
         Ok(response) => {
             match response.into_json::<ImaggaResponse>() {
                 Ok(response) => {
-                    let tags = map_response_to_tags(response);
-                    println!("{}", tags.join(", "))
+                    match response.result {
+                        Some(result) => {
+                            let tags = map_result_to_tags(result);
+                            println!("{}", tags.join(", "))
+                        },
+                        None => todo!(),
+                    }
+
                 },
                 Err(err) => {
                     println!("Err: {err}")
                 },
             }
         },
-        Err(Error::Status(code, text)) => {
-            print!("error {code} : {text:#?}")
+        Err(Error::Status(code, response)) => {
+            match response.into_json::<ImaggaResponse>() {
+                Ok(response) => {
+                    println!("Imagga error {code}: {}", response.status.error_text)
+                },
+                Err(err) => {
+                    println!("Error {code} while fetching Imagga error message: {}", err)
+                },
+            }
         }, Err(err) => {
             print!("other error: {err}")
         }
     }
 }
 
-fn map_response_to_tags(response: ImaggaResponse) -> Vec::<String> {
-    response
-        .result
+fn map_result_to_tags(result: ImaggaResult) -> Vec::<String> {
+    result
         .tags
         .iter()
         .map(|tag| tag.translations.english.to_owned())
@@ -59,7 +71,7 @@ fn map_response_to_tags(response: ImaggaResponse) -> Vec::<String> {
 
 #[derive(Deserialize)]
 struct ImaggaResponse {
-    result: ImaggaResult,
+    result: Option<ImaggaResult>,
     status: ImaggaStatus
 }
 #[derive(Deserialize)]
