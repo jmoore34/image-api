@@ -1,7 +1,11 @@
 use std::env::var;
 
+use axum::http::StatusCode;
 use serde::{Serialize, Deserialize};
 use ureq::{post, Error, get};
+
+use crate::error::ServerError;
+
 
 pub fn get_imagga_authorization() -> String {
     match (var("IMAGGA_API_KEY"), var("IMAGGA_API_SECRET")) {
@@ -22,7 +26,7 @@ struct ImaggaRequest<'a> {
     pub image_url: &'a str
 }
 
-pub fn get_tags_for_url(url: &str) {
+pub fn get_tags_for_url(url: &str) -> Result<Vec<String>, ServerError> {
     let result = get("https://api.imagga.com/v2/tags")
         .set("Authorization", &get_imagga_authorization())
         .query("image_url", url)
@@ -34,29 +38,41 @@ pub fn get_tags_for_url(url: &str) {
                 Ok(response) => {
                     match response.result {
                         Some(result) => {
-                            let tags = map_result_to_tags(result);
-                            println!("{}", tags.join(", "))
+                            Ok(map_result_to_tags(result))
                         },
-                        None => todo!(),
+                        None => {
+                            // HTTP 500 error because this should not happen
+                            Err((StatusCode::INTERNAL_SERVER_ERROR,
+                            "Received 200 OK response from Imagga but with missing result".to_owned()))
+                        },
                     }
 
                 },
                 Err(err) => {
-                    println!("Err: {err}")
+                    // HTTP 500 error because this should not happen
+                    Err((StatusCode::INTERNAL_SERVER_ERROR,
+                        "Received 200 OK response from Imagga but could not deserialize".to_owned()))
                 },
             }
         },
         Err(Error::Status(code, response)) => {
             match response.into_json::<ImaggaResponse>() {
                 Ok(response) => {
-                    println!("Imagga error {code}: {}", response.status.error_text)
+                    // HTTP 400 error because it is likely the fault of the user
+                    // (e.g., providing a URL to an image that does not exist)
+                    Err((StatusCode::BAD_REQUEST,
+                        format!("Imagga: Error {code}: {}", response.status.error_text)))
                 },
                 Err(err) => {
-                    println!("Error {code} while fetching Imagga error message: {}", err)
+                    // HTTP 500 error because this should not happen
+                    Err((StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Received error {code} from Imagga but could not deserialize")))
                 },
             }
         }, Err(err) => {
-            print!("other error: {err}")
+            // HTTP 500 error because this should not happen
+            Err((StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error while making request to Imagga: {err}")))
         }
     }
 }

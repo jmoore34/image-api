@@ -5,7 +5,8 @@ use imagga_client::get_tags_for_url;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
 use tower::ServiceBuilder;
-pub mod imagga_client;
+mod imagga_client;
+mod error;
 
 
 #[tokio::main]
