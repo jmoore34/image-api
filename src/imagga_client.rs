@@ -1,6 +1,6 @@
 use std::env::var;
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use ureq::{post, Error, get};
 
 pub fn get_imagga_authorization() -> String {
@@ -30,7 +30,15 @@ pub fn get_tags_for_url(url: &str) {
 
     match result {
         Ok(response) => {
-            print!("{}", response.into_string().expect("convert to string"))
+            match response.into_json::<ImaggaResponse>() {
+                Ok(response) => {
+                    let tags = map_response_to_tags(response);
+                    println!("{}", tags.join(", "))
+                },
+                Err(err) => {
+                    println!("Err: {err}")
+                },
+            }
         },
         Err(Error::Status(code, text)) => {
             print!("error {code} : {text:#?}")
@@ -38,5 +46,41 @@ pub fn get_tags_for_url(url: &str) {
             print!("other error: {err}")
         }
     }
+}
 
+fn map_response_to_tags(response: ImaggaResponse) -> Vec::<String> {
+    response
+        .result
+        .tags
+        .iter()
+        .map(|tag| tag.translations.english.to_owned())
+        .collect()
+}
+
+#[derive(Deserialize)]
+struct ImaggaResponse {
+    result: ImaggaResult,
+    status: ImaggaStatus
+}
+#[derive(Deserialize)]
+struct ImaggaResult {
+    tags: Vec<ImaggaTag>
+}
+#[derive(Deserialize)]
+struct ImaggaTag {
+    confidence: f32,
+    #[serde(rename = "tag")]
+    translations: ImaggaTagTranslations
+}
+#[derive(Deserialize)]
+struct ImaggaTagTranslations {
+    #[serde(rename = "en")]
+    english: String
+}
+#[derive(Deserialize)]
+struct ImaggaStatus {
+    #[serde(rename = "text")]
+    error_text: String,
+    #[serde(rename = "type")]
+    status_type: String
 }
