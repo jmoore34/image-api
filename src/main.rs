@@ -2,13 +2,14 @@ use std::env;
 
 use axum::{Router, routing::{get, post}, Extension};
 use migration::{Migrator, MigratorTrait};
-use routes::post_image;
+use routes::{post_image, get_image_by_id};
 use sea_orm::Database;
 use tower::ServiceBuilder;
 mod imagga_client;
 mod error;
 mod create_image;
 mod routes;
+mod query_images;
 
 
 #[tokio::main]
@@ -26,6 +27,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/images", post(post_image))
+        .route("/image/:image_id", get(get_image_by_id))
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(database_connection))

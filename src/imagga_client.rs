@@ -42,7 +42,7 @@ pub fn get_tags_for_url(url: &str) -> Result<Vec<String>, ServerError> {
                         },
                         None => {
                             // HTTP 500 error because this should not happen
-                            Err((StatusCode::INTERNAL_SERVER_ERROR,
+                            Err(ServerError::new(StatusCode::INTERNAL_SERVER_ERROR,
                             "Received 200 OK response from Imagga but with missing result".to_owned()))
                         },
                     }
@@ -50,7 +50,7 @@ pub fn get_tags_for_url(url: &str) -> Result<Vec<String>, ServerError> {
                 },
                 Err(err) => {
                     // HTTP 500 error because this should not happen
-                    Err((StatusCode::INTERNAL_SERVER_ERROR,
+                    Err(ServerError::new(StatusCode::INTERNAL_SERVER_ERROR,
                         format!("Received 200 OK response from Imagga but could not deserialize: {err}")))
                 },
             }
@@ -60,18 +60,18 @@ pub fn get_tags_for_url(url: &str) -> Result<Vec<String>, ServerError> {
                 Ok(response) => {
                     // HTTP 400 error because it is likely the fault of the user
                     // (e.g., providing a URL to an image that does not exist)
-                    Err((StatusCode::BAD_REQUEST,
+                    Err(ServerError::new(StatusCode::BAD_REQUEST,
                         format!("Imagga: Error {code}: {}", response.status.error_text)))
                 },
                 Err(err) => {
                     // HTTP 500 error because this should not happen
-                    Err((StatusCode::INTERNAL_SERVER_ERROR,
+                    Err(ServerError::new(StatusCode::INTERNAL_SERVER_ERROR,
                         format!("Received error {code} from Imagga but could not deserialize: {err}")))
                 },
             }
         }, Err(err) => {
             // HTTP 500 error because this should not happen
-            Err((StatusCode::INTERNAL_SERVER_ERROR,
+            Err(ServerError::new(StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Error while making request to Imagga: {err}")))
         }
     }

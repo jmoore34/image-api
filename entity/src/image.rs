@@ -17,9 +17,12 @@ pub enum Relation {
     ImageTag,
 }
 
-impl Related<super::image_tag::Entity> for Entity {
+impl Related<super::tag::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ImageTag.def()
+        super::image_tag::Relation::Tag.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::image_tag::Relation::Image.def().rev())
     }
 }
 
