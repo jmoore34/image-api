@@ -17,7 +17,10 @@ pub struct ImageResult {
     tags: Vec<String>,
     label: String,
 }
-pub async fn query_image_by_id(id: i32, db: &DatabaseConnection) -> Result<ImageResult, ServerError> {
+pub async fn query_image_by_id(
+    id: i32,
+    db: &DatabaseConnection,
+) -> Result<ImageResult, ServerError> {
     let image: Option<image::Model> = Image::find()
         .filter(image::Column::Id.eq(id))
         .one(db)
@@ -40,4 +43,22 @@ pub async fn query_image_by_id(id: i32, db: &DatabaseConnection) -> Result<Image
         }
     }
 }
+pub async fn query_images(db: &DatabaseConnection) -> Result<Vec<ImageResult>, ServerError> {
+    let images_with_tags: Vec<(image::Model, Vec<tag::Model>)> =
+        Image::find().find_with_related(Tag).all(db).await?;
 
+    let result_images: Vec<ImageResult> = images_with_tags
+        .iter()
+        .map(|(image, tags)| {
+            // Extract names from Tags (shadowing old value)
+            let tags: Vec<String> = tags.iter().map(|tag| tag.name.clone()).collect();
+            ImageResult {
+                url: image.url.clone(),
+                label: image.label.clone(),
+                tags,
+            }
+        })
+        .collect();
+
+    Ok(result_images)
+}

@@ -10,7 +10,7 @@ use crate::{
     create_image::execute_insert_image,
     error::ServerError,
     imagga_client::get_tags_for_url,
-    query_images::{query_image_by_id, ImageResult},
+    query_images::{self, query_image_by_id, query_images, ImageResult},
 };
 
 #[derive(Deserialize)]
@@ -44,4 +44,10 @@ pub async fn get_image_by_id(
     Extension(ref db): Extension<DatabaseConnection>,
 ) -> Result<axum::Json<ImageResult>, ServerError> {
     Ok(Json(query_image_by_id(image_id, db).await?))
+}
+
+pub async fn get_all_images(
+    Extension(ref db): Extension<DatabaseConnection>,
+) -> Result<axum::Json<Vec<ImageResult>>, ServerError> {
+    Ok(Json(query_images(db).await?))
 }
