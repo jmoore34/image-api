@@ -935,6 +935,7 @@ dependencies = [
  "axum",
  "base64",
  "entity",
+ "futures",
  "migration",
  "sea-orm",
  "serde",

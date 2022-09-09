@@ -1,12 +1,14 @@
 use std::env;
 
-use axum::{Router, routing::get, Extension};
-use imagga_client::get_tags_for_url;
+use axum::{Router, routing::{get, post}, Extension};
 use migration::{Migrator, MigratorTrait};
+use routes::post_image;
 use sea_orm::Database;
 use tower::ServiceBuilder;
 mod imagga_client;
 mod error;
+mod create_image;
+mod routes;
 
 
 #[tokio::main]
@@ -23,6 +25,7 @@ async fn main() {
     // Route and extension (i.e. for database) setup    
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
+        .route("/images", post(post_image))
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(database_connection))

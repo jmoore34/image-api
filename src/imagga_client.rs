@@ -2,7 +2,7 @@ use std::env::var;
 
 use axum::http::StatusCode;
 use serde::{Serialize, Deserialize};
-use ureq::{post, Error, get};
+use ureq::{Error, get};
 
 use crate::error::ServerError;
 
@@ -51,7 +51,7 @@ pub fn get_tags_for_url(url: &str) -> Result<Vec<String>, ServerError> {
                 Err(err) => {
                     // HTTP 500 error because this should not happen
                     Err((StatusCode::INTERNAL_SERVER_ERROR,
-                        "Received 200 OK response from Imagga but could not deserialize".to_owned()))
+                        format!("Received 200 OK response from Imagga but could not deserialize: {err}")))
                 },
             }
         },
@@ -66,7 +66,7 @@ pub fn get_tags_for_url(url: &str) -> Result<Vec<String>, ServerError> {
                 Err(err) => {
                     // HTTP 500 error because this should not happen
                     Err((StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Received error {code} from Imagga but could not deserialize")))
+                        format!("Received error {code} from Imagga but could not deserialize: {err}")))
                 },
             }
         }, Err(err) => {
@@ -96,6 +96,7 @@ struct ImaggaResult {
 }
 #[derive(Deserialize)]
 struct ImaggaTag {
+    #[allow(dead_code)]
     confidence: f32,
     #[serde(rename = "tag")]
     translations: ImaggaTagTranslations
@@ -110,5 +111,6 @@ struct ImaggaStatus {
     #[serde(rename = "text")]
     error_text: String,
     #[serde(rename = "type")]
+    #[allow(dead_code)] // this field is unused
     status_type: String
 }
