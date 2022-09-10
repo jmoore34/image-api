@@ -24,6 +24,7 @@ pub struct NewImageRequest {
 pub async fn post_image(
     Json(request): Json<NewImageRequest>,
     Extension(ref db): Extension<DatabaseConnection>,
+    Extension(imagga_authorization): Extension<String>,
 ) -> Result<Json<ImageResult>, ServerError> {
     let image_input = match (request.image_url, request.image_base64) {
         (Some(url), None) => Ok(ImageInput::ImageUrl(url)),
@@ -35,7 +36,7 @@ pub async fn post_image(
     }?;
 
     let tags = if request.object_detection {
-        get_tags_for_image(image_input.clone())?
+        get_tags_for_image(image_input.clone(), imagga_authorization)?
     } else {
         // If no tags were requested, we use an empty tag list
         vec![]

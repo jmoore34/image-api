@@ -28,15 +28,15 @@ pub enum ImageInput {
     ImageUrl(String),
     ImageBase64(String),
 }
-pub fn get_tags_for_image(image_input: ImageInput) -> Result<Vec<String>, ServerError> {
+pub fn get_tags_for_image(image_input: ImageInput, imagga_authorization: String) -> Result<Vec<String>, ServerError> {
     let response = match image_input {
         ImageInput::ImageUrl(image_url) => get("https://api.imagga.com/v2/tags")
-            .set("Authorization", &get_imagga_authorization())
+            .set("Authorization", &imagga_authorization)
             .query("image_url", &image_url)
             .call(),
         ImageInput::ImageBase64(image_base64) => {
             post("https://api.imagga.com/v2/tags")
-                .set("Authorization", &get_imagga_authorization())
+                .set("Authorization", &imagga_authorization)
                 .send_form(&[("image_base64", &image_base64)])
         }
     };
