@@ -29,6 +29,7 @@ pub struct ImageResult {
     url: String,
     tags: Vec<String>,
     label: String,
+    id: i32,
 }
 pub async fn query_image_by_id(
     id: i32,
@@ -50,6 +51,7 @@ pub async fn query_image_by_id(
             let tags: Vec<String> = tags.iter().map(|tag| tag.name.clone()).collect();
             Ok(ImageResult {
                 url: image.url,
+                id: image.id,
                 label: image.label,
                 tags,
             })
@@ -101,6 +103,7 @@ pub async fn query_images(
             let tags: Vec<String> = tags.iter().map(|tag| tag.name.clone()).collect();
             ImageResult {
                 url: image.url.clone(),
+                id: image.id,
                 label: image.label.clone(),
                 tags,
             }
