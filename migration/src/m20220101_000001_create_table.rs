@@ -97,7 +97,7 @@ impl MigrationTrait for Migration {
 
 /// Learn more at https://docs.rs/sea-query#iden
 #[derive(Iden)]
-enum Image {
+pub enum Image {
     Table,
     Id,
     Label,
@@ -105,14 +105,14 @@ enum Image {
 }
 
 #[derive(Iden)]
-enum Tag {
+pub enum Tag {
     Table,
     Id,
     Name
 }
 
 #[derive(Iden)]
-enum ImageTag {
+pub enum ImageTag {
     Table,
     ImageId,
     TagId

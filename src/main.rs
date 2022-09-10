@@ -2,7 +2,7 @@ use std::env;
 
 use axum::{Router, routing::{get, post}, Extension};
 use migration::{Migrator, MigratorTrait};
-use routes::{post_image, get_image_by_id, get_all_images};
+use routes::{post_image, get_image_by_id, get_images};
 use sea_orm::Database;
 use tower::ServiceBuilder;
 use upload_image::{UPLOAD_DIR, FILES_ROUTE};
@@ -29,7 +29,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/images", post(post_image))
-        .route("/images", get(get_all_images))
+        .route("/images", get(get_images))
         .route("/image/:image_id", get(get_image_by_id))
         .merge(axum_extra::routing::SpaRouter::new(FILES_ROUTE, UPLOAD_DIR))
         .layer(

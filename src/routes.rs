@@ -1,9 +1,9 @@
 use axum::{
-    extract::{Json, Path},
+    extract::{Json, Path, Query},
     http::StatusCode,
     Extension,
 };
-use sea_orm::{DatabaseConnection};
+use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
 use crate::{
@@ -31,7 +31,7 @@ pub async fn post_image(
         (_, _) => Err(ServerError::new(
             StatusCode::BAD_REQUEST,
             "Expected an image URL or base64 encoded image (not both)".into(),
-        ))
+        )),
     }?;
 
     let tags = if request.object_detection {
@@ -53,8 +53,27 @@ pub async fn get_image_by_id(
     Ok(Json(query_image_by_id(image_id, db).await?))
 }
 
-pub async fn get_all_images(
+#[derive(Deserialize)]
+pub struct GetImagesQueryParams {
+    objects: Option<String>, // request images containing all objects in a comma-separated list
+    some_objects: Option<String> // request images containing 1+ objects in a comma separated list
+}
+pub async fn get_images(
+    query_params: Query<GetImagesQueryParams>,
     Extension(ref db): Extension<DatabaseConnection>,
 ) -> Result<axum::Json<Vec<ImageResult>>, ServerError> {
-    Ok(Json(query_images(TagFilter::None,db).await?))
+    let tag_filter = match (&query_params.objects, &query_params.some_objects) {
+        (Some(objects_list), None) => {
+            let objects: Vec<String> = objects_list.split(",").map(|s| s.to_owned()).collect();
+            Ok(TagFilter::ContainsAllTags(objects))
+        },
+        (None, Some(objects_list)) => {
+            let objects: Vec<String> = objects_list.split(",").map(|s| s.to_owned()).collect();
+            Ok(TagFilter::ContainsSomeTags(objects))
+        },
+        (None, None) => Ok(TagFilter::None),
+        (Some(_), Some(_)) => Err(ServerError::new(StatusCode::BAD_REQUEST, 
+            "Cannot specify both an objects list and a some_objects list".to_owned())),
+    }?;
+    Ok(Json(query_images(tag_filter, db).await?))
 }
