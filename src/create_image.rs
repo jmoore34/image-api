@@ -7,9 +7,15 @@ use migration::DbErr;
 use sea_orm::ActiveModelTrait;
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
+use sea_orm::DatabaseTransaction;
 use sea_orm::EntityTrait;
 use sea_orm::QueryFilter;
+use sea_orm::TransactionTrait;
 use sea_orm::{ActiveValue::NotSet, Set};
+
+use crate::error::ServerError;
+use crate::imagga_client::ImageInput;
+use crate::upload_image::upload;
 
 fn create_image_model(
     url: String,
@@ -37,19 +43,22 @@ fn generate_label(tags: &Vec<String>) -> String {
     }
 }
 
-pub type ImageId = i32;
+type ImageId = i32;
 pub async fn execute_insert_image(
-    url: String,
+    image_input: ImageInput,
     tags: Vec<String>,
     label: Option<String>,
-    db: &DatabaseConnection,
-) -> Result<ImageId, DbErr> {
+    db: &DatabaseConnection, // Here we use a DatabaseTransaction so if anything fails, the changes will all be rolled back
+) -> Result<ImageId, ServerError> {
+    // Perform everything in a transaction
+    // so that if something goes wrong, all the database changes get rolled back
+    let txn = db.begin().await?;
     // Get the list of tag IDs from the database
     // (creating new tags as needed)
     // 1. wait for all async queries to finish
     let tag_ids = join_all(
         tags.iter()
-            .map(|tag| async { get_tag_id(tag.clone(), db).await }),
+            .map(|tag| async { get_tag_id(tag.clone(), &txn).await }),
     )
     .await;
     // 2. We have a vector of results, which we then collect into a result of vectors.
@@ -57,7 +66,14 @@ pub async fn execute_insert_image(
     let tag_ids = tag_ids.into_iter().collect::<Result<Vec<_>, DbErr>>()?;
 
     // Construct and insert the image metadata
-    let new_image = create_image_model(url, &tags, label).insert(db).await?;
+    let url = match &image_input {
+        ImageInput::ImageUrl(url) => url.to_owned(),
+        // If no URL is available, we give it a temporary one
+        // (since we need the ID in order to include the ID in the image name)
+        ImageInput::ImageBase64(_) => "temporary".to_owned(),
+    };
+    let new_image = create_image_model(url, &tags, label).insert(&txn).await?;
+    let image_id = new_image.id;
 
     // Now we pair the image with the associated tags
     // in the ImageTag junction table
@@ -68,14 +84,26 @@ pub async fn execute_insert_image(
             tag_id: Set(*tag_id),
         })
         .collect::<Vec<_>>();
-    ImageTag::insert_many(image_tags).exec(db).await?;
+    ImageTag::insert_many(image_tags).exec(&txn).await?;
 
-    Ok(new_image.id)
+    if let ImageInput::ImageBase64(image_base64) = image_input {
+        let new_image_url = upload(&image_base64, new_image.id);
+
+        let active_model: image::ActiveModel = new_image.into();
+        let updated_model = image::ActiveModel {
+            url: Set(new_image_url),
+            ..active_model
+        };
+        updated_model.update(&txn).await?;
+    }
+    txn.commit().await?;
+
+    Ok(image_id)
 }
 
 // If a tag exists by name, return its id
 // else insert a new tag and return its id
-async fn get_tag_id(name: String, db: &DatabaseConnection) -> Result<i32, DbErr> {
+async fn get_tag_id(name: String, db: &DatabaseTransaction) -> Result<i32, DbErr> {
     let existing = Tag::find()
         .filter(tag::Column::Name.eq(name.to_owned()))
         .one(db)

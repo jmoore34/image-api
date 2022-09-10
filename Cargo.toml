@@ -20,3 +20,5 @@ base64 = "0.13.0"
 sea-orm = { version = "^0", features = [ "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print" ] }
 tower = "0.4.13"
 futures = "0.3.24"
+photon-rs = "0.3.1"
+axum-extra = { version = "*", features = ["spa"] }

@@ -5,11 +5,13 @@ use migration::{Migrator, MigratorTrait};
 use routes::{post_image, get_image_by_id, get_all_images};
 use sea_orm::Database;
 use tower::ServiceBuilder;
+use upload_image::{UPLOAD_DIR, FILES_ROUTE};
 mod imagga_client;
 mod error;
 mod create_image;
 mod routes;
 mod query_images;
+mod upload_image;
 
 
 #[tokio::main]
@@ -29,6 +31,7 @@ async fn main() {
         .route("/images", post(post_image))
         .route("/images", get(get_all_images))
         .route("/image/:image_id", get(get_image_by_id))
+        .merge(axum_extra::routing::SpaRouter::new(FILES_ROUTE, UPLOAD_DIR))
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(database_connection))

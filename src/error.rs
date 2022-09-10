@@ -1,5 +1,9 @@
+
+use std::io::Error;
+
 use axum::{http::StatusCode, response::IntoResponse};
 use migration::DbErr;
+use sea_orm::TransactionError;
 
 //pub type ServerError = (StatusCode, String);
 pub struct ServerError {
@@ -21,6 +25,15 @@ impl From<DbErr> for ServerError {
         }
     }
 }
+// Same idea as above
+impl From<TransactionError<DbErr>> for ServerError {
+    fn from(err: TransactionError<DbErr>) -> Self {
+        ServerError {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            msg: format!("Transaction error: {err}"),
+        }
+    }
+}
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
@@ -31,5 +44,19 @@ impl IntoResponse for ServerError {
 impl ServerError {
     pub fn new(code: StatusCode, msg: String)  -> ServerError {
         ServerError { code, msg }
+    }
+}
+
+impl From<Error> for ServerError {
+    fn from(err: Error) -> Self {
+        ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, 
+        format!("Error: {err}"))
+    }
+}
+
+impl From<ureq::Error> for ServerError {
+    fn from(err: ureq::Error) -> Self {
+        ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, 
+        format!("Error while making request: ureq: {err}"))
     }
 }
