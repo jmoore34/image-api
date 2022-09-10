@@ -1,5 +1,8 @@
 {
     "cSpell.words": [
         "imagga"
+    ],
+    "rust-analyzer.diagnostics.disabled": [
+        "unresolved-proc-macro"
     ]
 }
