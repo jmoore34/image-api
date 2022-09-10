@@ -83,6 +83,7 @@ GET /images?some_objects=dog,cat
         "tag2",
         ...
     ],
-    "label": "<a label you provided, or one that was generated for you>"
+    "label": "<a label you provided, or one that was generated for you>",
+    "id": "<the image's id>"
 }
 ```
