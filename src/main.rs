@@ -8,7 +8,6 @@ use imagga_client::get_imagga_authorization;
 use migration::{Migrator, MigratorTrait};
 use routes::{get_image_by_id, get_images, post_image};
 use sea_orm::Database;
-use tower::ServiceBuilder;
 use upload_image::{FILES_ROUTE, UPLOAD_DIR};
 mod create_image;
 mod error;
