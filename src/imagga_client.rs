@@ -82,7 +82,7 @@ pub fn get_tags_for_image(image_input: ImageInput, imagga_authorization: String)
             ))
         }
         Err(err) => {
-            // Here we giva a HTTP 500 error because this is a catastrophic error with no feedback
+            // Here we give a HTTP 500 error because this is a catastrophic error with no feedback
             // Which means Imagga isn't working at all (e.g. it is down) or our client isn't working
             Err(ServerError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
