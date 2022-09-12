@@ -7,6 +7,21 @@ pub struct Migration;
 /// Image is used for storing metadata about an image such as its URL and label
 /// Tag is an object that can be found in an image
 /// ImageTag is a junction table that connect images to tags (m-to-n relationship)
+/// 
+/// ┌───────────────┐ ┌──────────────┐
+/// │ Image         │ │ Tag          │
+/// ├───────────────┤ ├──────────────┤
+/// │*id (integer)  │ │*id (integer) │
+/// │ label (string)│ │ name (string)│
+/// │ url (string)  │ │              │
+/// └───────────────┘ └──────────────┘
+///   ▲                            ▲
+///   │  ┌──────────────────────┐  │
+///   │  │ ImageTag             │  │
+///   │  ├──────────────────────┤  │
+///   └──┤*image_id (integer FK)│  │
+///      │*tag_id (integer FK)  ├──┘
+///      └──────────────────────┘
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     /// Create the tables if they do not already exist
