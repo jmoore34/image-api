@@ -24,6 +24,8 @@ async fn main() {
     let database_connection = Database::connect(database_url)
         .await
         .expect("Unable to connect to database");
+    // Here we run migrations only if they're needed. SeaORM has its own table in the
+    // database which keeps track of which migrations have already been run.    
     Migrator::up(&database_connection, None).await.unwrap();
 
     let imagga_auth = get_imagga_authorization();
@@ -35,7 +37,9 @@ async fn main() {
         .route("/images", get(get_images))
         .route("/image/:image_id", get(get_image_by_id))
         .merge(axum_extra::routing::SpaRouter::new(FILES_ROUTE, UPLOAD_DIR))
+        // Provide our database connection to any route that wants it
         .layer(Extension(database_connection))
+        // Provide the Imagga authorization string to any route that wants it
         .layer(Extension(imagga_auth));
 
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())

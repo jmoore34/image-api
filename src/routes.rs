@@ -13,6 +13,16 @@ use crate::{
     query_images::{query_image_by_id, query_images, ImageResult, TagFilter},
 };
 
+/// This struct is deserialized from the JSON body
+/// of a `POST /images` request. It specifies whether the user
+/// wants object detection or not, as well as gives the user 
+/// the option to specify the image's label (one will be 
+/// generated automatically otherwise). 
+/// The user has the option of specifying an image URL or 
+/// an image's base64-encoded data; however, the user should
+/// do only one of these things. A HTTP 400 error will be given
+/// if the user tries to give both or neither of the `image_url`
+/// and `image_base64` fields.
 #[derive(Deserialize)]
 pub struct NewImageRequest {
     image_url: Option<String>,
@@ -21,11 +31,20 @@ pub struct NewImageRequest {
     object_detection: bool,
 }
 
+/// The route handler for the `POST /images` endpoint. The JSON
+/// body is deserialized into the NewImageRequest struct. A 400 or 500
+/// class error can be returned depending on whether the user was at fault.
+/// If no errors occur, the image is inserted into the database and the
+/// resulting inserted images is serialized and sent back to the user.
+/// If the insert fails mid-request, its changes to the database will
+/// be rolled back (see execute_insert_image implementation.)
 pub async fn post_image(
     Json(request): Json<NewImageRequest>,
     Extension(ref db): Extension<DatabaseConnection>,
     Extension(imagga_authorization): Extension<String>,
 ) -> Result<Json<ImageResult>, ServerError> {
+    // Pattern match on the input to make sure that the user has provided an image
+    // URL or base64-encoded data but not both/neither.
     let image_input = match (request.image_url, request.image_base64) {
         (Some(url), None) => Ok(ImageInput::ImageUrl(url)),
         (None, Some(base64)) => Ok(ImageInput::ImageBase64(base64)),
@@ -47,6 +66,8 @@ pub async fn post_image(
     Ok(Json(query_image_by_id(image_id, db).await?))
 }
 
+/// The route handler for the `GET /image/{imageId}` endpoint. Fetches the image and
+/// returns it as JSON, unless it doesn't exist, in which case it returns a 404.
 pub async fn get_image_by_id(
     Path(image_id): Path<i32>,
     Extension(ref db): Extension<DatabaseConnection>,
@@ -54,11 +75,22 @@ pub async fn get_image_by_id(
     Ok(Json(query_image_by_id(image_id, db).await?))
 }
 
+/// The query parameters for the `GET /images` endpoint.
+/// `objects` is used for requesting images that contain all specified objects.
+/// `some_objects` is used for requesting images that contain some of the
+/// specified objects.
+/// Neither query parameter is necessary, and if neither are provided, all
+/// images will be returned.
+/// However, passing both `objects` and `some_objects` query parameters is not
+/// allowed and will result in a HTTP 400 Bad Request response.
 #[derive(Deserialize)]
 pub struct GetImagesQueryParams {
     objects: Option<String>, // request images containing all objects in a comma-separated list
     some_objects: Option<String> // request images containing 1+ objects in a comma separated list
 }
+/// The endpoint for the `GET /images` route (as well as with the `objects` and `some_objects`
+/// query parameters, as per the GetImagesQueryParameters struct). Returns a JSON array of images
+/// that include a list of their associated tags.
 pub async fn get_images(
     query_params: Query<GetImagesQueryParams>,
     Extension(ref db): Extension<DatabaseConnection>,

@@ -17,33 +17,16 @@ use crate::error::ServerError;
 use crate::imagga_client::ImageInput;
 use crate::upload_image::upload;
 
-fn create_image_model(
-    url: String,
-    tags: &Vec<String>,
-    label: Option<String>,
-) -> image::ActiveModel {
-    let label = match label {
-        Some(label) => label,
-        None => generate_label(&tags),
-    };
-
-    image::ActiveModel {
-        id: NotSet,
-        label: Set(label),
-        url: Set(url),
-    }
-}
-
-fn generate_label(tags: &Vec<String>) -> String {
-    if tags.is_empty() {
-        "An untagged image".to_owned()
-    } else {
-        let tag_list = tags.join(", ");
-        format!("An image containing {tag_list}.")
-    }
-}
-
 type ImageId = i32;
+/// A function that accesses the database and inserts an image.
+/// An image can be specified by a URL or by base64 encoding.
+/// A label can be provided; otherwise, it will be generated from
+/// the image's provided tags.
+/// This function will also insert the tags into the database if
+/// they do not already exist and link them to the image via the 
+/// ImageTag junction table. A single database transaction is used
+/// such that any errors will cause all database mutations to be
+/// rolled back.
 pub async fn execute_insert_image(
     image_input: ImageInput,
     tags: Vec<String>,
@@ -86,6 +69,9 @@ pub async fn execute_insert_image(
         .collect::<Vec<_>>();
     ImageTag::insert_many(image_tags).exec(&txn).await?;
 
+    // Now that we have an image id, we now use it in the filename of the uploaded
+    // image (if the image was specified by base64 encoding). Here we upload the image
+    // and then update the Image's URL in the database.
     if let ImageInput::ImageBase64(image_base64) = image_input {
         let new_image_url = upload(&image_base64, new_image.id);
 
@@ -101,8 +87,8 @@ pub async fn execute_insert_image(
     Ok(image_id)
 }
 
-// If a tag exists by name, return its id
-// else insert a new tag and return its id
+/// If a tag exists by name, return its id
+/// else insert a new tag and return its id
 async fn get_tag_id(name: String, db: &DatabaseTransaction) -> Result<i32, DbErr> {
     let existing = Tag::find()
         .filter(tag::Column::Name.eq(name.to_owned()))
@@ -121,5 +107,36 @@ async fn get_tag_id(name: String, db: &DatabaseTransaction) -> Result<i32, DbErr
 
             Ok(new_tag.id)
         }
+    }
+}
+
+/// A small helper function to generate a label from a list of 
+/// tags by separating them with commas.
+fn generate_label(tags: &Vec<String>) -> String {
+    if tags.is_empty() {
+        "An untagged image".to_owned()
+    } else {
+        let tag_list = tags.join(", ");
+        format!("An image containing {tag_list}.")
+    }
+}
+
+
+/// A small helper function to construct an Image ActiveModel, i.e.
+/// a model that can be inserted into the database
+fn create_image_model(
+    url: String,
+    tags: &Vec<String>,
+    label: Option<String>,
+) -> image::ActiveModel {
+    let label = match label {
+        Some(label) => label,
+        None => generate_label(&tags),
+    };
+
+    image::ActiveModel {
+        id: NotSet,
+        label: Set(label),
+        url: Set(url),
     }
 }

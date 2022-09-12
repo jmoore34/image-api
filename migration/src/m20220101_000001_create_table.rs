@@ -3,8 +3,13 @@ use sea_orm_migration::prelude::*;
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
+/// This migration sets up the three main tables: Image, Tag, and ImageId
+/// Image is used for storing metadata about an image such as its URL and label
+/// Tag is an object that can be found in an image
+/// ImageTag is a junction table that connect images to tags (m-to-n relationship)
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
+    /// Create the tables if they do not already exist
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .create_table(
@@ -82,6 +87,7 @@ impl MigrationTrait for Migration {
             .await
     }
 
+    // Destroy all the tables and revert the database to the pre-migration state
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .drop_table(Table::drop().table(ImageTag::Table).to_owned())
@@ -95,7 +101,9 @@ impl MigrationTrait for Migration {
     }
 }
 
-/// Learn more at https://docs.rs/sea-query#iden
+// These enums allow us to more safely (and consistently) refer to the names of columns and tables
+// throughout our codebase.
+// Learn more at https://docs.rs/sea-query#iden
 #[derive(Iden)]
 pub enum Image {
     Table,

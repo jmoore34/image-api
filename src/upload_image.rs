@@ -5,6 +5,9 @@ pub static UPLOAD_DIR: &str = "uploaded_files";
 // The route (from the root) that clients should use to access uploaded files
 pub static FILES_ROUTE: &str = "/files";
 
+/// Upload an image, providing  its base64-encoded data,
+/// and use its image ID to derive its filename. Then return
+/// a url to the uploaded image.
 pub fn upload(base64str: &str, id: i32) -> String {
     let image = base64_to_image(base64str);
     let path = format!("{UPLOAD_DIR}/{id}.png");
