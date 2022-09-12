@@ -67,7 +67,9 @@ pub async fn execute_insert_image(
             tag_id: Set(*tag_id),
         })
         .collect::<Vec<_>>();
-    ImageTag::insert_many(image_tags).exec(&txn).await?;
+    if image_tags.len() > 0 {
+        ImageTag::insert_many(image_tags).exec(&txn).await?;
+    }
 
     // Now that we have an image id, we now use it in the filename of the uploaded
     // image (if the image was specified by base64 encoding). Here we upload the image
